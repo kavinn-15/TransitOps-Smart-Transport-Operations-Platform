@@ -22,7 +22,7 @@
     <form id="login-form">
       <div class="field">
         <label for="login-email">Email</label>
-        <input type="email" id="login-email" placeholder="raven.k@transitops.in" autocomplete="username" value="raven.k@transitops.in">
+        <input type="email" id="login-email" placeholder="admin@transitops.in" autocomplete="username" value="admin@transitops.in">
       </div>
       <div class="field">
         <label for="login-password">Password</label>
@@ -31,6 +31,7 @@
       <div class="field">
         <label for="login-role">Role (RBAC)</label>
         <select id="login-role">
+          <option>Administrator</option>
           <option>Dispatcher</option>
           <option>Fleet Manager</option>
           <option>Safety Officer</option>
@@ -50,6 +51,7 @@
       <div class="demo-row"><span>meera.s@transitops.in</span><span>Fleet Manager</span></div>
       <div class="demo-row"><span>arjun.p@transitops.in</span><span>Safety Officer</span></div>
       <div class="demo-row"><span>kabir.n@transitops.in</span><span>Financial Analyst</span></div>
+      <div class="demo-row"><span>admin@transitops.in</span><span>Administrator (full access)</span></div>
     </div>
   </div>
 </div>
@@ -147,7 +149,7 @@
           </div>
         </div>
         <div class="panel">
-          <table><thead><tr><th>Driver</th><th>License No.</th><th>Category</th><th>Expiry</th><th>Contact</th><th>Trip Compl.</th><th>Safety</th><th>Status</th></tr></thead>
+          <table><thead><tr><th>Driver</th><th>License No.</th><th>Category</th><th>Expiry</th><th>Contact</th><th>Trip Compl.</th><th>Safety</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody id="drivers-body"></tbody>
           </table>
         </div>
@@ -179,8 +181,8 @@
             <div id="trip-validation"></div>
             <div class="modal-actions" style="margin-top:16px;justify-content:flex-start;">
               <button class="btn btn-primary btn-sm" id="trip-dispatch-btn" onclick="dispatchTrip()">Dispatch</button>
-              <button class="btn btn-ghost btn-sm" onclick="saveTripDraft()">Save Draft</button>
-              <button class="btn btn-danger-ghost btn-sm" onclick="resetTripForm()">Cancel</button>
+              <button class="btn btn-ghost btn-sm" id="trip-savedraft-btn" onclick="saveTripDraft()">Save Draft</button>
+              <button class="btn btn-danger-ghost btn-sm" id="trip-cancel-btn" onclick="resetTripForm()">Cancel</button>
             </div>
           </div>
           <div class="panel panel-pad">
@@ -207,7 +209,7 @@
               <div class="field-sm"><label>Cost</label><input type="number" id="maint-cost" placeholder="2500"></div>
               <div class="field-sm"><label>Date</label><input type="date" id="maint-date"></div>
             </div>
-            <button class="btn btn-primary" style="width:100%;margin-top:16px;" onclick="saveMaintenance()">Save</button>
+            <button class="btn btn-primary" id="maint-save-btn" style="width:100%;margin-top:16px;" onclick="saveMaintenance()">Save</button>
             <div style="margin-top:18px;font-size:12px;font-family:var(--font-mono);color:var(--text-dim);display:flex;flex-direction:column;gap:8px;">
               <div>Available <span style="color:var(--text-faint);">— creating active record →</span> <span style="color:var(--warn);">In Shop</span></div>
               <div>In Shop <span style="color:var(--text-faint);">— closing record (not retired) →</span> <span style="color:var(--success);">Available</span></div>
