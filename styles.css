@@ -274,7 +274,9 @@ tbody tr:hover{background:var(--panel-2);}
   padding:9px 11px;border-radius:7px;font-size:13px;outline:none;
 }
 .field-sm input:focus,.field-sm select:focus{border-color:var(--accent);}
-.field-sm input:disabled{opacity:.45;}
+.field-sm input:disabled,.field-sm select:disabled{opacity:.45;cursor:not-allowed;}
+button:disabled{opacity:.4;cursor:not-allowed;filter:none !important;}
+.role-lock-note{margin-bottom:16px;}
 
 .callout{border-radius:8px;padding:11px 13px;font-size:12.5px;margin:14px 0;border:1px solid transparent;line-height:1.55;}
 .callout-danger{background:rgba(248,113,113,.08);border-color:rgba(248,113,113,.3);color:#ffb4b4;}
