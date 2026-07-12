@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Deliberately minimal / empty. Spring Boot's SpringServletContainerInitializer
+  is auto-discovered on Servlet 3.0+ containers (Tomcat 10.1 supports 6.0), so
+  it registers the DispatcherServlet itself - no <servlet>/<servlet-mapping>
+  entries are needed here. Do NOT hand-add a <url-pattern> without a leading
+  "/" (e.g. "index") - that is what caused the original startup failure.
+-->
+<web-app xmlns="https://jakarta.ee/xml/ns/jakartaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
+         https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd"
+         version="6.0">
+  <display-name>transitops-fleet</display-name>
+</web-app>

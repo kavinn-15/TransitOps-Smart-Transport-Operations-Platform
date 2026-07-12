@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TransitOps — Fleet Command</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- =========================================================== LOGIN =========================================================== -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-brand"><span class="dot"></span><span>Fleet Command</span></div>
+    <h1>Sign in to TransitOps</h1>
+    <p class="sub">Enter your credentials to continue</p>
+
+    <div class="login-error" id="login-error"></div>
+
+    <form id="login-form">
+      <div class="field">
+        <label for="login-email">Email</label>
+        <input type="email" id="login-email" placeholder="admin@transitops.in" autocomplete="username" value="admin@transitops.in">
+      </div>
+      <div class="field">
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password" value="demo123">
+      </div>
+      <div class="field">
+        <label for="login-role">Role (RBAC)</label>
+        <select id="login-role">
+          <option>Administrator</option>
+          <option>Dispatcher</option>
+          <option>Fleet Manager</option>
+          <option>Safety Officer</option>
+          <option>Financial Analyst</option>
+        </select>
+      </div>
+      <div class="row-between">
+        <label class="remember"><input type="checkbox" checked> Remember me</label>
+        <a href="#" class="link-accent" onclick="return false;">Forgot password?</a>
+      </div>
+      <button type="submit" class="btn btn-primary">Sign In</button>
+    </form>
+
+    <div class="login-footnote">
+      <b>Demo accounts</b> · password for all: <b>demo123</b>
+      <div class="demo-row"><span>raven.k@transitops.in</span><span>Dispatcher</span></div>
+      <div class="demo-row"><span>meera.s@transitops.in</span><span>Fleet Manager</span></div>
+      <div class="demo-row"><span>arjun.p@transitops.in</span><span>Safety Officer</span></div>
+      <div class="demo-row"><span>kabir.n@transitops.in</span><span>Financial Analyst</span></div>
+      <div class="demo-row"><span>admin@transitops.in</span><span>Administrator (full access)</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- =========================================================== APP SHELL =========================================================== -->
+<div id="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><div class="mark">T</div><div class="name">TransitOps</div></div>
+    <nav class="nav-line" id="nav-line"></nav>
+    <div class="sidebar-footer">
+      <div class="theme-toggle">Dark mode <div class="switch on" id="theme-switch" onclick="toggleTheme()"></div></div>
+      <button class="btn btn-ghost btn-sm" onclick="doLogout()">Log out</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <button class="icon-btn" id="mobile-nav-btn" onclick="document.getElementById('sidebar').classList.toggle('open')" style="display:none;">☰</button>
+      <div class="search-wrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="global-search" placeholder="Search vehicles, drivers, trips…" oninput="handleGlobalSearch(this.value)">
+      </div>
+      <div class="topbar-right">
+        <span class="page-crumb" id="page-crumb">Dashboard</span>
+        <div class="user-chip">
+          <span class="uname" id="topbar-username">—</span>
+          <span class="role-pill"><span class="r-dot"></span><span id="topbar-role">—</span></span>
+        </div>
+        <div class="avatar" id="topbar-avatar">—</div>
+      </div>
+    </div>
+
+    <div class="content" id="content">
+
+      <!-- ============ DASHBOARD ============ -->
+      <section class="page" id="page-dashboard">
+        <div class="page-head">
+          <div><div class="eyebrow">Overview</div><h2>Dashboard</h2></div>
+        </div>
+        <div class="filters-row">
+          <select id="dash-f-type" onchange="renderDashboard()">
+            <option value="All">Vehicle Type: All</option><option>Van</option><option>Truck</option><option>Mini</option>
+          </select>
+          <select id="dash-f-status" onchange="renderDashboard()">
+            <option value="All">Status: All</option><option>Available</option><option>On Trip</option><option>In Shop</option><option>Retired</option>
+          </select>
+          <select id="dash-f-region" onchange="renderDashboard()">
+            <option value="All">Region: All</option><option>Gandhinagar</option><option>Ahmedabad</option><option>Sanand</option>
+          </select>
+        </div>
+        <div class="kpi-grid" id="dash-kpis"></div>
+        <div class="two-col">
+          <div class="panel panel-pad">
+            <div class="panel-title">Recent Trips</div>
+            <table><thead><tr><th>Trip</th><th>Vehicle</th><th>Driver</th><th>Status</th><th>ETA</th></tr></thead>
+              <tbody id="dash-trips-body"></tbody>
+            </table>
+          </div>
+          <div class="panel panel-pad">
+            <div class="panel-title">Vehicle Status</div>
+            <div id="dash-vehicle-status"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ FLEET ============ -->
+      <section class="page" id="page-fleet">
+        <div class="page-head">
+          <div><div class="eyebrow">Assets</div><h2>Vehicle Registry</h2></div>
+          <div class="page-head-actions">
+            <button class="btn btn-ghost btn-sm" onclick="exportCSV('vehicles')">Export CSV</button>
+            <button class="btn btn-primary btn-sm" id="fleet-add-btn" onclick="openVehicleModal()">+ Add Vehicle</button>
+          </div>
+        </div>
+        <div class="filters-row">
+          <select id="fleet-f-type" onchange="renderFleet()"><option value="All">Type: All</option><option>Van</option><option>Truck</option><option>Mini</option></select>
+          <select id="fleet-f-status" onchange="renderFleet()"><option value="All">Status: All</option><option>Available</option><option>On Trip</option><option>In Shop</option><option>Retired</option></select>
+          <input type="text" id="fleet-f-search" placeholder="Search reg. no…" oninput="renderFleet()">
+        </div>
+        <div class="panel">
+          <table><thead><tr><th>Reg. No. (Unique)</th><th>Name/Model</th><th>Type</th><th>Capacity</th><th>Odometer</th><th>Acq. Cost</th><th>Status</th><th></th></tr></thead>
+            <tbody id="fleet-body"></tbody>
+          </table>
+        </div>
+        <div class="callout callout-warn">Rule: Registration No. must be unique · Retired / In Shop vehicles are hidden from Trip Dispatcher</div>
+      </section>
+
+      <!-- ============ DRIVERS ============ -->
+      <section class="page" id="page-drivers">
+        <div class="page-head">
+          <div><div class="eyebrow">People</div><h2>Drivers &amp; Safety Profiles</h2></div>
+          <div class="page-head-actions">
+            <button class="btn btn-ghost btn-sm" onclick="exportCSV('drivers')">Export CSV</button>
+            <button class="btn btn-primary btn-sm" id="drivers-add-btn" onclick="openDriverModal()">+ Add Driver</button>
+          </div>
+        </div>
+        <div class="panel">
+          <table><thead><tr><th>Driver</th><th>License No.</th><th>Category</th><th>Expiry</th><th>Contact</th><th>Trip Compl.</th><th>Safety</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="drivers-body"></tbody>
+          </table>
+        </div>
+        <div class="callout callout-warn">Rule: Expired license or Suspended status → blocked from trip assignment</div>
+      </section>
+
+      <!-- ============ TRIPS ============ -->
+      <section class="page" id="page-trips">
+        <div class="page-head">
+          <div><div class="eyebrow">Operations</div><h2>Trip Dispatcher</h2></div>
+        </div>
+        <div class="two-col-r">
+          <div class="panel panel-pad">
+            <div class="panel-title">Create Trip</div>
+            <div class="lifecycle" id="trip-lifecycle-preview">
+              <div class="lc-step" data-s="Draft"><span class="lc-dot"></span>Draft</div><div class="lc-line"></div>
+              <div class="lc-step" data-s="Dispatched"><span class="lc-dot"></span>Dispatched</div><div class="lc-line"></div>
+              <div class="lc-step" data-s="Completed"><span class="lc-dot"></span>Completed</div><div class="lc-line"></div>
+              <div class="lc-step" data-s="Cancelled"><span class="lc-dot"></span>Cancelled</div>
+            </div>
+            <div class="form-grid">
+              <div class="field-sm full"><label>Source</label><input id="trip-source" placeholder="Gandhinagar Depot"></div>
+              <div class="field-sm full"><label>Destination</label><input id="trip-dest" placeholder="Ahmedabad Hub"></div>
+              <div class="field-sm"><label>Vehicle (Available only)</label><select id="trip-vehicle" onchange="validateTripForm()"></select></div>
+              <div class="field-sm"><label>Driver (Available only)</label><select id="trip-driver" onchange="validateTripForm()"></select></div>
+              <div class="field-sm"><label>Cargo Weight (kg)</label><input type="number" id="trip-cargo" oninput="validateTripForm()" placeholder="450"></div>
+              <div class="field-sm"><label>Planned Distance (km)</label><input type="number" id="trip-distance" placeholder="38"></div>
+            </div>
+            <div id="trip-validation"></div>
+            <div class="modal-actions" style="margin-top:16px;justify-content:flex-start;">
+              <button class="btn btn-primary btn-sm" id="trip-dispatch-btn" onclick="dispatchTrip()">Dispatch</button>
+              <button class="btn btn-ghost btn-sm" id="trip-savedraft-btn" onclick="saveTripDraft()">Save Draft</button>
+              <button class="btn btn-danger-ghost btn-sm" id="trip-cancel-btn" onclick="resetTripForm()">Cancel</button>
+            </div>
+          </div>
+          <div class="panel panel-pad">
+            <div class="panel-title">Live Board</div>
+            <div id="live-board"></div>
+            <div class="callout callout-info" style="margin-top:4px;">On Complete: odometer → fuel log → expenses → Vehicle &amp; Driver set Available</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ MAINTENANCE ============ -->
+      <section class="page" id="page-maintenance">
+        <div class="page-head">
+          <div><div class="eyebrow">Workshop</div><h2>Maintenance</h2></div>
+        </div>
+        <div class="two-col">
+          <div class="panel panel-pad">
+            <div class="panel-title">Log Service Record</div>
+            <div class="form-grid">
+              <div class="field-sm full"><label>Vehicle</label>
+                <select id="maint-vehicle"></select>
+              </div>
+              <div class="field-sm full"><label>Service Type</label><input id="maint-service" placeholder="Oil Change"></div>
+              <div class="field-sm"><label>Cost</label><input type="number" id="maint-cost" placeholder="2500"></div>
+              <div class="field-sm"><label>Date</label><input type="date" id="maint-date"></div>
+            </div>
+            <button class="btn btn-primary" id="maint-save-btn" style="width:100%;margin-top:16px;" onclick="saveMaintenance()">Save</button>
+            <div style="margin-top:18px;font-size:12px;font-family:var(--font-mono);color:var(--text-dim);display:flex;flex-direction:column;gap:8px;">
+              <div>Available <span style="color:var(--text-faint);">— creating active record →</span> <span style="color:var(--warn);">In Shop</span></div>
+              <div>In Shop <span style="color:var(--text-faint);">— closing record (not retired) →</span> <span style="color:var(--success);">Available</span></div>
+            </div>
+            <div class="callout callout-warn">Note: In Shop vehicles are removed from the dispatch pool.</div>
+          </div>
+          <div class="panel panel-pad">
+            <div class="panel-title">Service Log</div>
+            <table><thead><tr><th>Vehicle</th><th>Service</th><th>Cost</th><th>Status</th><th></th></tr></thead>
+              <tbody id="maint-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ FUEL & EXPENSES ============ -->
+      <section class="page" id="page-fuel">
+        <div class="page-head">
+          <div><div class="eyebrow">Costs</div><h2>Fuel &amp; Expense Management</h2></div>
+          <div class="page-head-actions">
+            <button class="btn btn-primary btn-sm" onclick="openFuelModal()">+ Log Fuel</button>
+            <button class="btn btn-ghost btn-sm" onclick="openExpenseModal()">+ Add Expense</button>
+          </div>
+        </div>
+        <div class="panel panel-pad" style="margin-bottom:16px;">
+          <div class="panel-title">Fuel Logs</div>
+          <table><thead><tr><th>Vehicle</th><th>Date</th><th>Liters</th><th>Fuel Cost</th></tr></thead>
+            <tbody id="fuel-body"></tbody>
+          </table>
+        </div>
+        <div class="panel panel-pad">
+          <div class="panel-title">Other Expenses (Toll / Misc)</div>
+          <table><thead><tr><th>Trip</th><th>Vehicle</th><th>Toll</th><th>Other</th><th>Maint. (linked)</th><th>Total</th></tr></thead>
+            <tbody id="expense-body"></tbody>
+          </table>
+          <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;padding-top:14px;margin-top:6px;border-top:1px solid var(--line);">
+            <span class="mono" style="text-transform:uppercase;letter-spacing:.06em;">Total Operational Cost (auto) = Fuel + Maint.</span>
+            <span style="font-family:var(--font-display);font-size:18px;font-weight:700;color:var(--amber);" id="total-op-cost">₹0</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ ANALYTICS ============ -->
+      <section class="page" id="page-analytics">
+        <div class="page-head">
+          <div><div class="eyebrow">Insight</div><h2>Reports &amp; Analytics</h2></div>
+          <div class="page-head-actions"><button class="btn btn-ghost btn-sm" onclick="exportCSV('analytics')">Export CSV</button></div>
+        </div>
+        <div class="kpi-grid" id="analytics-kpis"></div>
+        <div class="mono" style="font-size:11px;color:var(--text-faint);margin:-8px 0 18px;">ROI = (Revenue − (Maintenance + Fuel)) / Acquisition Cost</div>
+        <div class="two-col">
+          <div class="panel panel-pad">
+            <div class="panel-title">Monthly Revenue (illustrative)</div>
+            <div class="bars" id="revenue-bars"></div>
+          </div>
+          <div class="panel panel-pad">
+            <div class="panel-title">Top Costliest Vehicles</div>
+            <div id="costliest-vehicles"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ SETTINGS ============ -->
+      <section class="page" id="page-settings">
+        <div class="page-head"><div><div class="eyebrow">System</div><h2>Settings &amp; RBAC</h2></div></div>
+        <div class="two-col">
+          <div class="panel panel-pad">
+            <div class="panel-title">General</div>
+            <div class="field-sm" style="margin-bottom:14px;"><label>Depot Name</label><input id="set-depot" value="Gandhinagar Depot, GJ"></div>
+            <div class="field-sm" style="margin-bottom:14px;"><label>Currency</label><input id="set-currency" value="INR (₹)"></div>
+            <div class="field-sm" style="margin-bottom:14px;"><label>Distance Unit</label><input id="set-unit" value="Kilometers"></div>
+            <button class="btn btn-primary btn-sm" onclick="toast('Settings saved')">Save changes</button>
+          </div>
+          <div class="panel panel-pad">
+            <div class="panel-title">Role-Based Access (RBAC)</div>
+            <table class="rbac-table"><thead><tr><th>Role</th><th>Fleet</th><th>Drivers</th><th>Trips</th><th>Fuel/Exp.</th><th>Analytics</th></tr></thead>
+              <tbody>
+                <tr><td>Fleet Manager</td><td class="perm-yes">✓</td><td class="perm-yes">✓</td><td class="perm-no">–</td><td class="perm-no">–</td><td class="perm-yes">✓</td></tr>
+                <tr><td>Dispatcher</td><td class="perm-view">view</td><td class="perm-no">–</td><td class="perm-yes">✓</td><td class="perm-no">–</td><td class="perm-no">–</td></tr>
+                <tr><td>Safety Officer</td><td class="perm-no">–</td><td class="perm-yes">✓</td><td class="perm-view">view</td><td class="perm-no">–</td><td class="perm-no">–</td></tr>
+                <tr><td>Financial Analyst</td><td class="perm-view">view</td><td class="perm-no">–</td><td class="perm-no">–</td><td class="perm-yes">✓</td><td class="perm-yes">✓</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Vehicle modal -->
+<div class="modal-backdrop" id="vehicle-modal">
+  <div class="modal">
+    <h3>Add Vehicle</h3>
+    <div class="form-grid">
+      <div class="field-sm full"><label>Registration No. (unique)</label><input id="mv-reg" placeholder="GJ01AB1234"></div>
+      <div class="field-sm full"><label>Name / Model</label><input id="mv-name" placeholder="VAN-06"></div>
+      <div class="field-sm"><label>Type</label><select id="mv-type"><option>Van</option><option>Truck</option><option>Mini</option></select></div>
+      <div class="field-sm"><label>Capacity (kg)</label><input type="number" id="mv-capacity" placeholder="500"></div>
+      <div class="field-sm"><label>Odometer</label><input type="number" id="mv-odometer" placeholder="0"></div>
+      <div class="field-sm"><label>Acq. Cost</label><input type="number" id="mv-cost" placeholder="500000"></div>
+    </div>
+    <div id="mv-error"></div>
+    <div class="modal-actions"><button class="btn btn-ghost btn-sm" onclick="closeModal('vehicle-modal')">Cancel</button><button class="btn btn-primary btn-sm" onclick="saveVehicle()">Save Vehicle</button></div>
+  </div>
+</div>
+
+<!-- Driver modal -->
+<div class="modal-backdrop" id="driver-modal">
+  <div class="modal">
+    <h3>Add Driver</h3>
+    <div class="form-grid">
+      <div class="field-sm full"><label>Name</label><input id="md-name" placeholder="Kiran"></div>
+      <div class="field-sm"><label>License No.</label><input id="md-license" placeholder="DL-12345"></div>
+      <div class="field-sm"><label>Category</label><select id="md-category"><option>LMV</option><option>HMV</option></select></div>
+      <div class="field-sm"><label>License Expiry</label><input type="date" id="md-expiry"></div>
+      <div class="field-sm"><label>Contact</label><input id="md-contact" placeholder="98xxxxxxx9"></div>
+    </div>
+    <div id="md-error"></div>
+    <div class="modal-actions"><button class="btn btn-ghost btn-sm" onclick="closeModal('driver-modal')">Cancel</button><button class="btn btn-primary btn-sm" onclick="saveDriver()">Save Driver</button></div>
+  </div>
+</div>
+
+<!-- Complete trip modal -->
+<div class="modal-backdrop" id="complete-modal">
+  <div class="modal">
+    <h3>Complete Trip</h3>
+    <div class="form-grid">
+      <div class="field-sm full"><label>Final Odometer</label><input type="number" id="ct-odometer" placeholder="74045"></div>
+      <div class="field-sm"><label>Fuel Consumed (L)</label><input type="number" id="ct-liters" placeholder="8"></div>
+      <div class="field-sm"><label>Fuel Cost (₹)</label><input type="number" id="ct-fuelcost" placeholder="640"></div>
+    </div>
+    <div class="modal-actions"><button class="btn btn-ghost btn-sm" onclick="closeModal('complete-modal')">Cancel</button><button class="btn btn-primary btn-sm" onclick="confirmCompleteTrip()">Mark Completed</button></div>
+  </div>
+</div>
+
+<!-- Fuel modal -->
+<div class="modal-backdrop" id="fuel-modal">
+  <div class="modal">
+    <h3>Log Fuel</h3>
+    <div class="form-grid">
+      <div class="field-sm full"><label>Vehicle</label><select id="mf-vehicle"></select></div>
+      <div class="field-sm"><label>Date</label><input type="date" id="mf-date"></div>
+      <div class="field-sm"><label>Liters</label><input type="number" id="mf-liters" placeholder="40"></div>
+      <div class="field-sm full"><label>Cost (₹)</label><input type="number" id="mf-cost" placeholder="3000"></div>
+    </div>
+    <div class="modal-actions"><button class="btn btn-ghost btn-sm" onclick="closeModal('fuel-modal')">Cancel</button><button class="btn btn-primary btn-sm" onclick="saveFuelLog()">Save Log</button></div>
+  </div>
+</div>
+
+<!-- Expense modal -->
+<div class="modal-backdrop" id="expense-modal">
+  <div class="modal">
+    <h3>Add Expense</h3>
+    <div class="form-grid">
+      <div class="field-sm full"><label>Trip</label><select id="me-trip"></select></div>
+      <div class="field-sm"><label>Toll (₹)</label><input type="number" id="me-toll" placeholder="120"></div>
+      <div class="field-sm"><label>Other (₹)</label><input type="number" id="me-other" placeholder="0"></div>
+    </div>
+    <div class="modal-actions"><button class="btn btn-ghost btn-sm" onclick="closeModal('expense-modal')">Cancel</button><button class="btn btn-primary btn-sm" onclick="saveExpense()">Save Expense</button></div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
