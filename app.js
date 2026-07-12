@@ -7,6 +7,7 @@ const DB = {
     {email:'meera.s@transitops.in',  password:'demo123', role:'Fleet Manager',     name:'Meera S.'},
     {email:'arjun.p@transitops.in',  password:'demo123', role:'Safety Officer',    name:'Arjun P.'},
     {email:'kabir.n@transitops.in',  password:'demo123', role:'Financial Analyst',name:'Kabir N.'},
+    {email:'admin@transitops.in',    password:'demo123', role:'Administrator',    name:'Admin User'},
   ],
   vehicles:[
     {reg:'GJ01AB4521', name:'VAN-05',   type:'Van',   capacity:500,  odometer:74000,  cost:620000,  status:'Available'},
@@ -55,11 +56,15 @@ const NAV = [
 ];
 
 /* Page permissions: full = edit access, view = read-only, none = hidden */
+/* Every role can SEE every page (nav items are never hidden); 'full' = can create/edit/change
+   status on that page, 'view' = read-only (forms disabled, action buttons hidden). This mirrors
+   the RBAC matrix on the Settings page while still letting every nav item render dynamically. */
 const PERMS = {
-  'Fleet Manager':      {dashboard:'full', fleet:'full', drivers:'full', trips:'none', maintenance:'full', fuel:'none',  analytics:'full', settings:'view'},
-  'Dispatcher':         {dashboard:'full', fleet:'view', drivers:'none', trips:'full', maintenance:'none', fuel:'none',  analytics:'none', settings:'view'},
-  'Safety Officer':     {dashboard:'full', fleet:'none', drivers:'full', trips:'view', maintenance:'none', fuel:'none',  analytics:'none', settings:'view'},
-  'Financial Analyst':  {dashboard:'full', fleet:'view', drivers:'none', trips:'none', maintenance:'none', fuel:'full',  analytics:'full', settings:'view'},
+  'Fleet Manager':      {dashboard:'full', fleet:'full', drivers:'full', trips:'view', maintenance:'full', fuel:'view',  analytics:'full', settings:'view'},
+  'Dispatcher':         {dashboard:'full', fleet:'view', drivers:'view', trips:'full', maintenance:'view', fuel:'view',  analytics:'view', settings:'view'},
+  'Safety Officer':     {dashboard:'full', fleet:'view', drivers:'full', trips:'view', maintenance:'view', fuel:'view',  analytics:'view', settings:'view'},
+  'Financial Analyst':  {dashboard:'full', fleet:'view', drivers:'view', trips:'view', maintenance:'view', fuel:'full',  analytics:'full', settings:'view'},
+  'Administrator':      {dashboard:'full', fleet:'full', drivers:'full', trips:'full', maintenance:'full', fuel:'full',  analytics:'full', settings:'full'},
 };
 
 let currentUser = null;
@@ -145,7 +150,8 @@ function navigate(pageId){
 function applyViewLocks(pageId){
   const level = pagePermission(pageId);
   const isView = level === 'view';
-  // toggle editable controls per-page
+
+  // toggle add buttons
   const editableIds = {
     fleet:['fleet-add-btn'],
     drivers:['drivers-add-btn'],
@@ -154,6 +160,42 @@ function applyViewLocks(pageId){
     const el = document.getElementById(id);
     if(el) el.style.display = isView ? 'none' : 'inline-flex';
   });
+
+  // disable Maintenance "Log Service Record" form for view-only roles
+  if(pageId === 'maintenance'){
+    ['maint-vehicle','maint-service','maint-cost','maint-date','maint-save-btn'].forEach(id=>{
+      const el = document.getElementById(id);
+      if(el) el.disabled = isView;
+    });
+    toggleLockNote('maintenance', isView, 'View-only access — you can see service records but cannot log or close them with this role.');
+  }
+
+  // disable Trip "Create Trip" form for view-only roles
+  if(pageId === 'trips'){
+    ['trip-source','trip-dest','trip-vehicle','trip-driver','trip-cargo','trip-distance',
+     'trip-dispatch-btn','trip-savedraft-btn','trip-cancel-btn'].forEach(id=>{
+      const el = document.getElementById(id);
+      if(el) el.disabled = isView;
+    });
+    toggleLockNote('trips', isView, 'View-only access — you can track the live board but cannot create, dispatch, complete or cancel trips with this role.');
+  }
+}
+
+function toggleLockNote(pageId, show, message){
+  const panel = document.querySelector('#page-'+pageId+' .panel-pad');
+  if(!panel) return;
+  let note = panel.querySelector('.role-lock-note');
+  if(show){
+    if(!note){
+      note = document.createElement('div');
+      note.className = 'callout callout-info role-lock-note';
+      panel.insertBefore(note, panel.children[1] || null);
+    }
+    note.textContent = message;
+    note.style.display = 'block';
+  } else if(note){
+    note.style.display = 'none';
+  }
 }
 
 function renderPage(pageId){
@@ -408,6 +450,7 @@ function nextTripId(){
   return 'TR' + String(DB.tripSeq++).padStart(3,'0');
 }
 function saveTripDraft(){
+  if(pagePermission('trips') !== 'full'){ toast('Your role has view-only access to Trips', true); return; }
   const f = collectTripForm();
   if(!f.source || !f.dest){ toast('Source and Destination are required', true); return; }
   DB.trips.push({id:nextTripId(), ...f, status:'Draft', eta:'Awaiting dispatch'});
@@ -415,6 +458,7 @@ function saveTripDraft(){
   resetTripForm(); renderTrips();
 }
 function dispatchTrip(){
+  if(pagePermission('trips') !== 'full'){ toast('Your role has view-only access to Trips', true); return; }
   const f = collectTripForm();
   if(!f.source || !f.dest){ toast('Source and Destination are required', true); return; }
   const veh = DB.vehicles.find(v=>v.name===f.vehicle);
@@ -472,11 +516,12 @@ function renderTrips(){
     board.innerHTML = `<div class="empty-state"><div class="em-icon">🗺️</div><p>No trips on the board yet.</p></div>`;
     return;
   }
+  const canManageTrips = pagePermission('trips') === 'full';
   board.innerHTML = DB.trips.slice().reverse().map(t=>{
     const stageOrder = ['Draft','Dispatched','Completed'];
     let actions = '';
-    if(t.status==='Draft') actions = `<button class="btn btn-ghost btn-sm" onclick="cancelTrip('${t.id}')">Cancel</button>`;
-    if(t.status==='Dispatched') actions = `<button class="btn btn-primary btn-sm" onclick="completeTrip('${t.id}')">Complete</button> <button class="btn btn-danger-ghost btn-sm" onclick="cancelTrip('${t.id}')">Cancel</button>`;
+    if(canManageTrips && t.status==='Draft') actions = `<button class="btn btn-ghost btn-sm" onclick="cancelTrip('${t.id}')">Cancel</button>`;
+    if(canManageTrips && t.status==='Dispatched') actions = `<button class="btn btn-primary btn-sm" onclick="completeTrip('${t.id}')">Complete</button> <button class="btn btn-danger-ghost btn-sm" onclick="cancelTrip('${t.id}')">Cancel</button>`;
     return `<div class="live-board-item">
       <div class="lb-top"><div><div class="lb-id">${t.id}</div><div class="lb-route">${t.source||'—'} → ${t.dest||'—'}</div></div>
       <div class="lb-meta">${t.vehicle||'Unassigned'}${t.driver?' / '+t.driver:''}</div></div>
@@ -493,6 +538,7 @@ function renderTrips(){
    MAINTENANCE
    ====================================================================== */
 function saveMaintenance(){
+  if(pagePermission('maintenance') !== 'full'){ toast('Your role has view-only access to Maintenance', true); return; }
   const vehicle = document.getElementById('maint-vehicle').value;
   const service = document.getElementById('maint-service').value.trim();
   const cost = Number(document.getElementById('maint-cost').value)||0;
@@ -506,6 +552,7 @@ function saveMaintenance(){
   renderMaintenance(); renderFleet(); renderDashboard();
 }
 function closeMaintenance(idx){
+  if(pagePermission('maintenance') !== 'full'){ toast('Your role has view-only access to Maintenance', true); return; }
   const rec = DB.maintenance[idx];
   rec.status = 'Completed';
   const v = DB.vehicles.find(v=>v.name===rec.vehicle);
